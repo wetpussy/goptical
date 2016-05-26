@@ -105,12 +105,13 @@ namespace _goptical {
         {
           // update max radius
 
-          double m = s._transform.transform(math::vector2_0).len() + s._shape->max_radius();
+          double mmax = s._transform.transform(math::vector2_0).len() + s._shape->max_radius();      
+          if (mmax > _max_radius)
+            _max_radius = mmax;
 
-          if (m > _max_radius)
-            _max_radius = m;
-          if (m < _min_radius)
-            _min_radius = m;
+          double mmin = s._transform.transform(math::vector2_0).len() + s._shape->min_radius();
+          if (mmin < _min_radius)
+            _min_radius = mmin;
 
           // update bounding box
 
@@ -159,6 +160,13 @@ namespace _goptical {
 
     double Composer::get_outter_radius(const math::Vector2 &dir) const
     {
+        /*
+        const math::Vector2 &e = (fabs(dir.x() / dir.y()) < 1)
+            ? math::vector2_10 : math::vector2_01;
+
+        return (math::VectorPair2(math::Vector2(40, 40), e)
+              .ln_intersect_ln(math::VectorPair2(math::vector2_0, dir))).len();
+        */
       // FIXME
       return _max_radius;
     }
@@ -166,7 +174,7 @@ namespace _goptical {
     double Composer::get_hole_radius(const math::Vector2 &dir) const
     {
       // FIXME
-      return 0;
+      return 0.0;
     }
 
     math::VectorPair2 Composer::get_bounding_box() const
@@ -229,7 +237,7 @@ namespace _goptical {
             }
 
           contour -= c;
-        }
+        }    
     }
 
     void Composer::get_triangles(const math::Triangle<2>::put_delegate_t  &f, double resolution) const
