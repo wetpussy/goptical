@@ -201,7 +201,7 @@ void OpenglApp::gl_resize(GLsizei width, GLsizei height)
 
 int main(int argc, char **argv)
 {
-  CompositeTest<OpenglApp> app;
+  CompositeExample<OpenglApp> app;
 
   return 0;
 }

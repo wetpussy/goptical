@@ -25,6 +25,7 @@
 #include <limits>
 
 #include <goptical/core/math/Vector>
+#include <goptical/core/math/Matrix>
 
 #include <goptical/core/sys/System>
 #include <goptical/core/sys/Source>
@@ -41,7 +42,7 @@ namespace _goptical {
 
       SourceDisk::SourceDisk(SourceInfinityMode m, 
                              const math::Vector3& pos_dir, 
-                             const math::Vector2& size,
+                             double size,
                              const math::Vector2& limit1,
                              const math::Vector2& limit2)
           : Source(m == SourceAtInfinity
@@ -52,6 +53,7 @@ namespace _goptical {
                    : math::VectorPair3(math::Vector3(0,0,0)/*pos_dir * -1e9*/, pos_dir)),
             _mode(m),
             _size(size),
+            _halfsize(size / 2),
             _direction(pos_dir),
             _limit1(limit1),
             _limit2(limit2)
@@ -72,7 +74,7 @@ namespace _goptical {
 
       // i is point on target surface
       auto de = [&]( const math::Vector3 &i ) {
-          //math::Vector3 r_ = starget->get_transform_to(*this).transform(i);  // pattern point on target surface
+          math::Vector3 r = starget->get_transform_to(*this).transform(i);  // pattern point on target surface
 
           if (i[0] < _limit1[0] ||
               i[0] > _limit2[0] ||
@@ -92,30 +94,56 @@ namespace _goptical {
               break;
 
           case (SourceAtInfinity):
-//              std::cout << direction << " " << i << std::endl;
-//              exit(-1);
-//              for (double xi = -_size.x()/2.0; xi < _size.x()/2.0; xi+=_size.x()/10) {
-//                  for (double yi = -_size.y()/2.0; yi < _size.y()/2.0; yi+=_size.y()/10) {
-                      for (auto&l : this->_spectrum) {
+              direction = math::vector3_001;
+              position = math::VectorPair3(starget->get_position(*this) -
+                                           math::vector3_001 * rlen, math::vector3_001).
+                  pl_ln_intersect(math::VectorPair3(r, direction));
+
+              static const double epsilon = 1e-8;
+              //const double step = _halfsize / d.get_radial_density(); 
+              const double step = _halfsize / 10; // FIXME magical number desu
+
+              for (auto&l : this->_spectrum) {
+                  math::Vector3 dir = direction;
+
+                  {   // chief ray
+                      trace::Ray &r = result.new_ray();
+
+                      r.direction() = dir;
+                      r.origin() = position;
+
+                      r.set_creator(this);
+                      r.set_intensity(l.get_intensity()); // FIXME depends on distance from source and pattern density
+                      r.set_wavelen(l.get_wavelen());
+                      r.set_material(_mat.valid() ? _mat.ptr() : &get_system()->get_environment_proxy());
+                  }
+
+                  for (double rad_angle = _size; rad_angle > epsilon; rad_angle -= step)
+                  {
+                      double astep = (step / rad_angle) * (M_PI / 3);
+
+                      for (double circle_angle = 0; circle_angle < 2 * M_PI - epsilon; circle_angle += astep)
+                      {
+                          math::Matrix3x3 rot1;
+                          get_rotation_matrix(rot1, 1, (rad_angle - _halfsize));
+                          math::Matrix3x3 rot2;
+                          get_rotation_matrix(rot2, 2, circle_angle);
+
+                          dir = rot1 * direction;
+                          dir = rot2 * dir;
+
                           trace::Ray &r = result.new_ray();
 
-                          math::Vector3 z(0,0,10000);
-                          math::Vector3 v(0,0,1);
-
-//                          r.direction() = math::Vector3(0, 0, 1).normalize();
-                          r.direction() = math::Vector3(0, 0, 1).normalize();
-//_direction;//_direction.normalized();//_direction.normalized();
-                          r.origin() = i - r.direction() * 1.0;
-                          //(r_ - _direction.normalized() * 100.0);
+                          r.direction() = dir;
+                          r.origin() = position;
 
                           r.set_creator(this);
                           r.set_intensity(l.get_intensity()); // FIXME depends on distance from source and pattern density
                           r.set_wavelen(l.get_wavelen());
                           r.set_material(_mat.valid() ? _mat.ptr() : &get_system()->get_environment_proxy());
-//                      }
-//                  }
+                      }
+                  }
               }
-
 
               break;
           }

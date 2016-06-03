@@ -51,7 +51,7 @@ namespace _goptical {
             instead. */
         SourceDisk(SourceInfinityMode m, 
                    const math::Vector3& pos_dir, 
-                   const math::Vector2& size,
+                   double size,
                    const math::Vector2& limit1 = math::Vector2(-math::Inf, -math::Inf),
                    const math::Vector2& limit2 = math::Vector2(math::Inf, math::Inf));
         
@@ -80,7 +80,8 @@ namespace _goptical {
                                    const Element &target) const;
         
         SourceInfinityMode _mode;
-        math::Vector2 _size;
+        double _size;
+        double _halfsize;
         math::Vector3 _direction;
         math::Vector2 _limit1;
         math::Vector2 _limit2;

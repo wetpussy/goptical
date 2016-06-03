@@ -145,7 +145,7 @@ void X11App::main_loop()
 
 int main(int argc, char **argv)
 {
-  CompositeTest<X11App> app;
+  CompositeExample<X11App> app;
 
   return 0;
 }

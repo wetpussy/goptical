@@ -46,7 +46,8 @@ namespace _goptical {
 
     Composer::Attributes::Attributes(const const_ref<Base> &shape)
       : _shape(shape),
-        _list()
+        _list(),
+        _exclude(false)
     {
       _transform.reset();
       _inv_transform.reset();
@@ -55,31 +56,32 @@ namespace _goptical {
     Composer::Attributes & Composer::add_shape(const const_ref<Base> &shape)
     {
       _list.push_back(Attributes(shape));
+      //_list.back()._exclude = true;
       _update = true;
       return _list.back();
     }
 
     Composer::Attributes & Composer::Attributes::include(const const_ref<Base> &shape)
     {
-      _list.push_back(Attributes(shape));
-      _list.back()._exclude = false;
-      return _list.back();
+      Attributes::_list.push_back(Attributes(shape));
+      Attributes::_list.back()._exclude = false;
+      return Attributes::_list.back();
     }
 
     Composer::Attributes & Composer::Attributes::exclude(const const_ref<Base> &shape)
     {
-      _list.push_back(Attributes(shape));
-      _list.back()._exclude = true;
-      return _list.back();
+      Attributes::_list.push_back(Attributes(shape));
+      Attributes::_list.back()._exclude = true;
+      return Attributes::_list.back();
     }
 
     bool Composer::Attributes::inside(const math::Vector2 &point) const
     {
       math::Vector2 tp(_inv_transform.transform(point));
 
-      bool res = _shape->inside(tp);
+      bool res = Attributes::_shape->inside(tp);
 
-      for (auto& s:  _list)
+      for (auto& s: Attributes::_list)
         res &= s.inside(tp);
 
       return res ^ _exclude;
@@ -87,11 +89,13 @@ namespace _goptical {
 
     bool Composer::inside(const math::Vector2 &point) const
     {
-      for (auto&s : _list)
-        if (s.inside(point))
-          return true;
 
-      return false;
+        for (auto&s : _list) {
+            if (s.inside(point))
+                return true;
+        }
+
+        return false;
     }
 
     void Composer::update()
@@ -105,7 +109,7 @@ namespace _goptical {
         {
           // update max radius
 
-          double mmax = s._transform.transform(math::vector2_0).len() + s._shape->max_radius();      
+          double mmax = s._transform.transform(math::vector2_0).len() + s._shape->max_radius();
           if (mmax > _max_radius)
             _max_radius = mmax;
 
@@ -160,13 +164,6 @@ namespace _goptical {
 
     double Composer::get_outter_radius(const math::Vector2 &dir) const
     {
-        /*
-        const math::Vector2 &e = (fabs(dir.x() / dir.y()) < 1)
-            ? math::vector2_10 : math::vector2_01;
-
-        return (math::VectorPair2(math::Vector2(40, 40), e)
-              .ln_intersect_ln(math::VectorPair2(math::vector2_0, dir))).len();
-        */
       // FIXME
       return _max_radius;
     }
@@ -174,7 +171,10 @@ namespace _goptical {
     double Composer::get_hole_radius(const math::Vector2 &dir) const
     {
       // FIXME
-      return 0.0;
+      if (_update)
+        update();
+
+      return _max_radius;
     }
 
     math::VectorPair2 Composer::get_bounding_box() const
@@ -189,6 +189,7 @@ namespace _goptical {
                                const trace::Distribution &d,
                                bool unobstructed) const
     {
+
       if (_global_dist)
         {
           Base::get_pattern(f, d, unobstructed);
@@ -201,8 +202,8 @@ namespace _goptical {
                 math::Vector2 p = s._transform.transform(v);
 
                 for (auto &s1 : s._list)
-                  if (!s1._exclude ^ s1._shape->inside(s1._inv_transform.transform(p)))
-                    return;
+                    if (!s1._exclude ^ s1._shape->inside(s1._inv_transform.transform(p)))
+                        return;
                 f(p);
               };
 
@@ -221,42 +222,40 @@ namespace _goptical {
 
     void Composer::get_contour(unsigned int contour, const math::Vector2::put_delegate_t  &f, double resolution) const
     {
-      // FIXME add contour boolean operations
+        // FIXME add contour boolean operations
 
-      for (auto&s : _list)
+        for (auto&s : _list)
         {
-          unsigned int c = s._shape->get_contour_count();
+            unsigned int c = s._shape->get_contour_count();
 
-          if (contour < c)
+            if (contour < c)
             {
-              auto de = [&](const math::Vector2 &v) {
-                f(s._transform.transform(v));
-              };
+                auto de = [&](const math::Vector2 &v) {
+                    f(s._transform.transform(v));
+                };
 
-              return s._shape->get_contour(contour, de, resolution);
+                return s._shape->get_contour(contour, de, resolution);
             }
 
-          contour -= c;
-        }    
+            contour -= c;
+        }
     }
 
     void Composer::get_triangles(const math::Triangle<2>::put_delegate_t  &f, double resolution) const
     {
-
-      for (auto&s :  _list)
+        for (auto&s :  _list)
         {
             auto de = [&] (const math::Triangle<2>& t) {
                 math::Triangle<2> p;
-                
+
                 for (unsigned int i = 0; i < 3; i++)
                     p[i] = s._transform.transform(t[i]);
-                
+
                 f(p);
             };
 
             s._shape->get_triangles(de, resolution);
         }
-
     }
   }
 }

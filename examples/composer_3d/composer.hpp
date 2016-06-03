@@ -48,11 +48,11 @@
 using namespace goptical;
 
 template <class X>
-class CompositeTest : public X
+class CompositeExample : public X
 {
 
 public:
-    CompositeTest();
+    CompositeExample();
 
     void redraw();
     void resize(int width, int height);
@@ -62,75 +62,41 @@ public:
 };
 
 template <class X>
-CompositeTest<X>::CompositeTest()
+CompositeExample<X>::CompositeExample()
   : X(),
     sys(),
     tracer(sys)
 {
-
-    
-    // optical system
     curve::Flat flat1;
-        
-    shape::Rectangle outer_shape(80);
-    shape::Rectangle inner_shape(10);
-    shape::Composer  master_shape;
-    shape::Composer::Attributes attrs = master_shape.add_shape(outer_shape);
 
-    std::cout << "composer" << std::endl << "--------" << std::endl;
-    std::cout << "max_raduis: " << master_shape.max_radius() << std::endl;
-    std::cout << "min_raduis: " << master_shape.min_radius() << std::endl;
-    math::VectorPair2 master_bbox = master_shape.get_bounding_box();
-    std::cout << "bbox x1: " << master_bbox.x1() << std::endl;
-    std::cout << "bbox y1: " << master_bbox.y1() << std::endl;    
-    std::cout << "--------" << std::endl << std::endl;
-    
-    std::cout << "rectangle" << std::endl << "--------" << std::endl;
-    std::cout << "max_raduis: " << outer_shape.max_radius() << std::endl;
-    std::cout << "min_raduis: " << outer_shape.min_radius() << std::endl;
-    math::VectorPair2 rect_bbox = outer_shape.get_bounding_box();
-    std::cout << "bbox x1: " << rect_bbox.x1() << std::endl;
-    std::cout << "bbox y1: " << rect_bbox.y1() << std::endl;    
-    std::cout << "--------" << std::endl << std::endl;
-    
-    sys::OpticalSurface s1(math::Vector3(0, 0, 0), // position,
-                           flat1, master_shape, material::none, material::none);
+    shape::Rectangle main_rect(195);
+    shape::Rectangle anti_main_rect(195);
+    shape::Rectangle inner_rect(10);
 
+    shape::Composer  grid_shape;
+    shape::Composer::Attributes &master_attr = grid_shape.add_shape(main_rect).exclude(anti_main_rect);
 
-    
+    for(int i = -80; i <= 80; i += 20)
+    {
+        for(int j = -80; j <= 80; j += 20)
+        {
+            master_attr.exclude(inner_rect).translate(math::Vector2(i, j));
+        }
+    }
+
+    sys::OpticalSurface s1(math::Vector3(0, 0, 500),
+                           flat1, grid_shape, material::none, material::none);
+
     sys::SourcePoint source(sys::SourceAtInfinity,
-                            math::Vector3(0, 0, 1));
-    
-    sys.add(source);
+                            math::Vector3(0.8, 0.8, 1));
 
+    sys::Image image(math::Vector3(0, 0, 600),
+                     300);
+
+    sys.add(source);
     sys.add(s1);
-
-    sys::Image    image(math::Vector3(0, 0, 500),  // position
-                      60);                       // square size,
-
     sys.add(image);
 
-    //sys.set_entrance_pupil(newton.get_primary());
-
-    // ray trace
-
-    
-/*
-      // optical system
-
-    sys::SourcePoint      source(sys::SourceAtInfinity, math::vector3_001);
-    sys.add(source);
-
-    Design::telescope::Newton     newton(math::vector3_0, 750, 250);
-    sys.add(newton);
-
-    sys::Image            image(newton.get_focal_plane(), 15);
-    sys.add(image);
-
-    sys.set_entrance_pupil(newton.get_primary());
-  
-*/
-    
     tracer.get_params().set_default_distribution(
         trace::Distribution(trace::HexaPolarDist, 3));
 
@@ -148,12 +114,12 @@ CompositeTest<X>::CompositeTest()
 }
 
 template <class X>
-void CompositeTest<X>::redraw()
+void CompositeExample<X>::redraw()
 {
   X::renderer->clear();
 
   math::Transform<3> t(
-         math::Quaternion::angle(math::vector3_100, X::rotation.x()) * 
+         math::Quaternion::angle(math::vector3_100, X::rotation.x()) *
          math::Quaternion::angle(math::vector3_010, X::rotation.y()) *
          math::Quaternion::angle(math::vector3_001, X::rotation.z()),
          X::translation);
@@ -169,7 +135,7 @@ void CompositeTest<X>::redraw()
 }
 
 template <class X>
-void CompositeTest<X>::resize(int width, int height)
+void CompositeExample<X>::resize(int width, int height)
 {
   // set output window size
   X::renderer->set_2d_size(width, height);

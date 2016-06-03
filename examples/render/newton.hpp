@@ -75,8 +75,8 @@ Newton<X>::Newton()
 {
 
   //  sys::SourceDisk source(sys::SourceAtInfinity, math::vector3_001, math::Vector2(45.0, 45.0));
-  sys::SourceDisk source(sys::SourceAtInfinity, math::Vector3(0, 0, 1),
-                         math::Vector2(45.0, 45.0));
+    sys::SourceDisk source(sys::SourceAtInfinity, math::Vector3(0, 0, 1), 0.2
+                           /*math::Vector2(45.0, 45.0)*/);
   source.set_material( dynamic_cast<sys::OpticalSurface*>(&system->get_element(1))->get_material(0) );
   source.single_spectral_line(light::SpectralLine(860.005));
 
