@@ -99,14 +99,16 @@ namespace _goptical {
               static const double epsilon = 1e-8;
               const double step = std::tan(_halfsize) / _density;
 
+              math::VectorPair3 chief_component(starget->get_position(*this) -
+                                                math::vector3_001 * rlen, math::vector3_001);
+              math::Vector3 chief_position = chief_component.pl_ln_intersect(math::VectorPair3(pp, math::vector3_001));
+                  
               for (auto&l : this->_spectrum) {
                   {   // chief ray
                       trace::Ray &r = result.new_ray();
 
                       r.direction() = math::vector3_001;
-                      r.origin() = math::VectorPair3(starget->get_position(*this) -
-                                                     math::vector3_001 * rlen, math::vector3_001).
-                          pl_ln_intersect(math::VectorPair3(pp, math::vector3_001));
+                      r.origin() = chief_position;
 
                       r.set_creator(this);
                       r.set_intensity(l.get_intensity()); // FIXME depends on distance from source and pattern density
@@ -116,21 +118,20 @@ namespace _goptical {
 
                   for (double rad_angle_tan = std::tan(_halfsize); std::atan(rad_angle_tan) > epsilon; rad_angle_tan -= step)
                   {
+                      math::Matrix3x3 radial_rot;
+                      get_rotation_matrix(radial_rot, 1, std::atan(rad_angle_tan));
+
                       double astep = (step / rad_angle_tan) * (M_PI / 3);
 
                       for (double circle_angle = 0; circle_angle < 2 * M_PI - epsilon; circle_angle += astep)
                       {
-                          math::Matrix3x3 radial_rot;
-                          get_rotation_matrix(radial_rot, 1, std::atan(rad_angle_tan));
                           math::Matrix3x3 circle_rot;
                           get_rotation_matrix(circle_rot, 2, circle_angle);
 
                           trace::Ray &r = result.new_ray();
 
                           r.direction() = circle_rot * (radial_rot * math::vector3_001);
-                          r.origin() = math::VectorPair3(starget->get_position(*this) -
-                                                          math::vector3_001 * rlen, math::vector3_001).
-                              pl_ln_intersect(math::VectorPair3(pp, r.direction()));;
+                          r.origin() = chief_component.pl_ln_intersect(math::VectorPair3(pp, r.direction()));;
 
                           r.set_creator(this);
                           r.set_intensity(l.get_intensity()); // FIXME depends on distance from source and pattern density
