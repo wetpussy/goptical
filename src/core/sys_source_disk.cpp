@@ -44,11 +44,12 @@ namespace _goptical {
                              const math::Vector3& pos_dir, 
                              double size,
                              const math::Vector2& limit1,
-                             const math::Vector2& limit2)
+                             const math::Vector2& limit2,
+                             double density)
           : Source(m == SourceAtInfinity
                    // position of infinity source is only used for trace::Sequence sort
                    ? 
-                   math::VectorPair3(-pos_dir, math::vector3_001)
+                   /* math::VectorPair3(-pos_dir, math::vector3_001) */ math::VectorPair3(pos_dir * -1e9, pos_dir)
 //                   math::VectorPair3(pos_dir, math::vector3_001)
                    : math::VectorPair3(math::Vector3(0,0,0)/*pos_dir * -1e9*/, pos_dir)),
             _mode(m),
@@ -56,7 +57,8 @@ namespace _goptical {
             _halfsize(size / 2),
             _direction(pos_dir),
             _limit1(limit1),
-            _limit2(limit2)
+            _limit2(limit2),
+            _density(density)
       {
       }
       
@@ -74,7 +76,7 @@ namespace _goptical {
 
       // i is point on target surface
       auto de = [&]( const math::Vector3 &i ) {
-          math::Vector3 r = starget->get_transform_to(*this).transform(i);  // pattern point on target surface
+          math::Vector3 pp = starget->get_transform_to(*this).transform(i);  // pattern point on target surface
 
           if (i[0] < _limit1[0] ||
               i[0] > _limit2[0] ||
@@ -94,23 +96,17 @@ namespace _goptical {
               break;
 
           case (SourceAtInfinity):
-              direction = math::vector3_001;
-              position = math::VectorPair3(starget->get_position(*this) -
-                                           math::vector3_001 * rlen, math::vector3_001).
-                  pl_ln_intersect(math::VectorPair3(r, direction));
-
               static const double epsilon = 1e-8;
-              //const double step = _halfsize / d.get_radial_density(); 
-              const double step = _halfsize / 10; // FIXME magical number desu
+              const double step = std::tan(_halfsize) / _density;
 
               for (auto&l : this->_spectrum) {
-                  math::Vector3 dir = direction;
-
                   {   // chief ray
                       trace::Ray &r = result.new_ray();
 
-                      r.direction() = dir;
-                      r.origin() = position;
+                      r.direction() = math::vector3_001;
+                      r.origin() = math::VectorPair3(starget->get_position(*this) -
+                                                     math::vector3_001 * rlen, math::vector3_001).
+                          pl_ln_intersect(math::VectorPair3(pp, math::vector3_001));
 
                       r.set_creator(this);
                       r.set_intensity(l.get_intensity()); // FIXME depends on distance from source and pattern density
@@ -118,24 +114,23 @@ namespace _goptical {
                       r.set_material(_mat.valid() ? _mat.ptr() : &get_system()->get_environment_proxy());
                   }
 
-                  for (double rad_angle = _size; rad_angle > epsilon; rad_angle -= step)
+                  for (double rad_angle_tan = std::tan(_halfsize); std::atan(rad_angle_tan) > epsilon; rad_angle_tan -= step)
                   {
-                      double astep = (step / rad_angle) * (M_PI / 3);
+                      double astep = (step / rad_angle_tan) * (M_PI / 3);
 
                       for (double circle_angle = 0; circle_angle < 2 * M_PI - epsilon; circle_angle += astep)
                       {
-                          math::Matrix3x3 rot1;
-                          get_rotation_matrix(rot1, 1, (rad_angle - _halfsize));
-                          math::Matrix3x3 rot2;
-                          get_rotation_matrix(rot2, 2, circle_angle);
-
-                          dir = rot1 * direction;
-                          dir = rot2 * dir;
+                          math::Matrix3x3 radial_rot;
+                          get_rotation_matrix(radial_rot, 1, std::atan(rad_angle_tan));
+                          math::Matrix3x3 circle_rot;
+                          get_rotation_matrix(circle_rot, 2, circle_angle);
 
                           trace::Ray &r = result.new_ray();
 
-                          r.direction() = dir;
-                          r.origin() = position;
+                          r.direction() = circle_rot * (radial_rot * math::vector3_001);
+                          r.origin() = math::VectorPair3(starget->get_position(*this) -
+                                                          math::vector3_001 * rlen, math::vector3_001).
+                              pl_ln_intersect(math::VectorPair3(pp, r.direction()));;
 
                           r.set_creator(this);
                           r.set_intensity(l.get_intensity()); // FIXME depends on distance from source and pattern density

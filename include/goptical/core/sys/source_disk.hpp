@@ -53,7 +53,8 @@ namespace _goptical {
                    const math::Vector3& pos_dir, 
                    double size,
                    const math::Vector2& limit1 = math::Vector2(-math::Inf, -math::Inf),
-                   const math::Vector2& limit2 = math::Vector2(math::Inf, math::Inf));
+                   const math::Vector2& limit2 = math::Vector2(math::Inf, math::Inf),
+                   double density = 1.0);
         
         /** Set point source mode to infinity and adjust source direction vector */
         void set_infinity_direction(const math::Vector3 &dir);
@@ -85,7 +86,7 @@ namespace _goptical {
         math::Vector3 _direction;
         math::Vector2 _limit1;
         math::Vector2 _limit2;
-
+        double _density;
     };
       
   }

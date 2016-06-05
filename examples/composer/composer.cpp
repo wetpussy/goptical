@@ -93,11 +93,11 @@ int main()
         }
     }
 
-    sys::OpticalSurface s1(math::Vector3(0, 0, 100),
+    sys::OpticalSurface s1(math::Vector3(0, 0, 10),
                            flat1, grid_shape, material::none, material::none);
 
-//    sys::OpticalSurface s2(math::Vector3(0, 0, 50),
-//                           flat1, other_shape, material::none, material::none);
+    //sys::OpticalSurface s2(math::Vector3(0, 0, 50),
+    //                       flat1, other_shape, material::none, material::none);
 
     // sys::SourcePoint source(sys::SourceAtInfinity,
     //                         math::Vector3(0, 0, 1));
@@ -106,20 +106,21 @@ int main()
     const math::Vector2 lim2(100, 100);
 
     sys::SourceDisk source(sys::SourceAtInfinity,
-                            math::Vector3(0, 0, 1),
-                            0.2,
-                            lim1,
-                            lim2);
+                           math::Vector3(0, 0, 1),
+                           0.7,
+                           lim1,
+                           lim2,
+                           4);
     //sys::SourcePoint source(sys::SourceAtInfinity,
     //                        math::Vector3(0, 0, 1));
 
-    sys::Image image(math::Vector3(0, 0, 200),
+    sys::Image image(math::Vector3(0, 0, 20),
                      200);
 
     sys::system  sys;
 
     sys.add(source);
-//    sys.add(s2);
+    //sys.add(s2);
     sys.add(s1);
     sys.add(image);
 
@@ -133,7 +134,7 @@ int main()
     //tracer.get_params().set_default_distribution(
     //    trace::Distribution(trace::HexaPolarDist, 100));
     tracer.get_params().set_default_distribution(
-        trace::Distribution(trace::RandomDist, 100));
+        trace::Distribution(trace::RandomDist, 200));
     tracer.get_trace_result().set_generated_save_state(source);
     tracer.get_trace_result().set_intercepted_save_state(image);
     tracer.trace();
@@ -146,6 +147,7 @@ int main()
         }
     }
 
+    /*
     analysis::Spot spot(sys);
     {
         io::RendererSvg renderer("spot.svg", 600, 600, io::rgb_black);
@@ -188,6 +190,7 @@ int main()
 
         tracer.get_trace_result().draw_3d(renderer);
     }
+    */
 
     cv::imshow("Display window", picture);
     cv::waitKey(0);
